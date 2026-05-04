@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0A0A0C">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔊</text></svg>">
+<title>SyncSound</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0A0C;--s1:rgba(255,255,255,0.04);--s2:rgba(255,255,255,0.06);--text:#F0EDE8;--dim:rgba(255,255,255,0.35);--muted:rgba(255,255,255,0.15);--accent:#FF6B35;--accent2:#FF3F00;--green:#4ADE80;--yellow:#FBBF24;--red:#EF4444;--r:16px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.mono{font-family:'JetBrains Mono',monospace}
+.hidden{display:none!important}
+.screen{min-height:100vh;min-height:100dvh;display:none;flex-direction:column;padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0)}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.8);opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes glow{0%,100%{opacity:.3}50%{opacity:.7}}
+.fade{animation:fadeIn .5s ease-out}.slide{animation:slideUp .5s ease-out}.slide-d{animation:slideUp .5s ease-out .15s both}
+.hdr{padding:20px 24px;display:flex;align-items:center;gap:12px}
+.btn-back{width:36px;height:36px;border-radius:12px;background:var(--s1);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.btn-p{width:100%;padding:18px 24px;border-radius:var(--r);border:none;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;box-shadow:0 8px 32px rgba(255,63,0,.3);display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s}
+.btn-p:active{transform:scale(.97)}.btn-p:disabled{background:var(--s1);color:var(--muted);box-shadow:none;cursor:default}
+.btn-s{width:100%;padding:18px 24px;border-radius:var(--r);border:1px solid var(--s2);cursor:pointer;background:var(--s1);color:var(--text);font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-sm{padding:8px 16px;border-radius:10px;background:var(--s1);border:1px solid var(--s2);color:var(--dim);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
+.input{width:100%;max-width:280px;padding:14px 16px;border-radius:12px;border:1px solid var(--s2);background:var(--s1);color:var(--text);font-size:15px;text-align:center;outline:none;font-family:'DM Sans',sans-serif}
+.input::placeholder{color:var(--muted)}
+.code-input{font-family:'JetBrains Mono',monospace;font-size:20px;letter-spacing:6px;text-transform:uppercase}
+.card{background:var(--s1);border:1px solid var(--s2);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.card.self{border-color:rgba(255,107,53,.3)}
+.card-icon{width:36px;height:36px;border-radius:10px;background:var(--s1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.card.self .card-icon{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.dot-g{background:var(--green)}.dot-y{background:var(--yellow)}.dot-r{background:var(--red)}
+input[type=range]{-webkit-appearance:none;appearance:none;height:3px;background:rgba(255,255,255,.1);border-radius:2px;outline:none;cursor:pointer;flex:1}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:none}
+.prog-track{width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;cursor:pointer;position:relative}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .25s linear;pointer-events:none}
+.btn-play{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;box-shadow:0 8px 32px rgba(255,63,0,.4);transition:transform .1s}
+.btn-play:active{transform:scale(.92)}
+.btn-skip{background:none;border:none;color:var(--dim);font-size:22px;cursor:pointer;padding:8px}
+.viz{display:flex;align-items:flex-end;gap:3px;height:48px;justify-content:center}
+.viz.sm{height:18px;gap:2px}
+.viz-bar{width:3px;border-radius:2px;background:linear-gradient(to top,var(--accent),var(--accent2));transition:height .1s ease}
+.viz.sm .viz-bar{width:2px}
+.viz.off .viz-bar{height:4px!important;opacity:.3;transition:height .6s}
+.upload{border:2px dashed var(--s2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:border-color .3s}
+.upload:active{border-color:var(--accent)}.upload input{display:none}
+.buffer-bar{width:100%;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-top:8px}
+.buffer-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:3px;transition:width .3s}
+.glow{position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:400px;height:400px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,107,53,.08) 0%,transparent 70%);animation:glow 4s ease-in-out infinite}
+.pulse-wrap{position:relative;width:120px;height:120px}
+.pulse-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--accent);animation:pulse 2s ease-out infinite}
+.pulse-ring:nth-child(2){animation-delay:.5s;opacity:.45}.pulse-ring:nth-child(3){animation-delay:1s;opacity:.3}
+.pulse-center{position:absolute;inset:16px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 0 40px rgba(255,107,53,.4)}
+.spinner{width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,107,53,.2);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:0 auto}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:100;animation:slideUp .3s ease-out;pointer-events:none;white-space:nowrap}
+.toast-ok{background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:var(--green)}
+.toast-err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.volume-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding:0 4px}
+.volume-label{font-size:10px;color:var(--muted)}
+.volume-val{font-size:10px;color:var(--dim);min-width:28px;text-align:right}
+</style>
+</head>
+<body>
+
+<!-- ═══ HOME ═══ -->
+<div id="s-home" class="screen active">
+  <div class="glow"></div>
+  <div class="hdr" style="justify-content:space-between;position:relative;z-index:2">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px">🔊</div>
+      <span style="font-weight:800;font-size:18px;letter-spacing:-.5px">SyncSound</span>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;position:relative;z-index:2" class="slide">
+    <div class="pulse-wrap"><div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-center">🔊</div></div>
+    <h1 style="font-weight:800;font-size:30px;text-align:center;margin-top:28px;line-height:1.15;letter-spacing:-1px">
+      Un suono,<br><span style="background:linear-gradient(90deg,var(--accent),#FFB088);-webkit-background-clip:text;-webkit-text-fill-color:transparent">ovunque.</span>
+    </h1>
+    <p style="font-size:14px;color:var(--dim);text-align:center;margin-top:12px;max-width:260px;line-height:1.6">
+      Ogni smartphone diventa uno speaker sincronizzato.
+    </p>
+    <input type="text" id="inp-name" class="input" placeholder="Il tuo nome" style="margin-top:24px" maxlength="20">
+  </div>
+  <div style="padding:0 24px 32px;display:flex;flex-direction:column;gap:12px;position:relative;z-index:2" class="slide-d">
+    <button class="btn-p" onclick="doCreate()">📡 Crea una Stanza</button>
+    <button class="btn-s" onclick="showScreen('join')">🔗 Unisciti</button>
+  </div>
+  <div style="text-align:center;padding-bottom:20px;font-size:11px;color:var(--muted)" class="mono">
+    Buffer Sync · Clock NTP · Mesh Relay
+  </div>
+</div>
+
+<!-- ═══ JOIN ═══ -->
+<div id="s-join" class="screen">
+  <div class="hdr">
+    <button class="btn-back" onclick="showScreen('home')">←</button>
+    <span style="font-size:16px;font-weight:600">Unisciti a una Stanza</span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px" class="fade">
+    <div id="join-form">
+      <p style="font-size:13px;color:var(--dim);margin-bottom:24px;text-align:center">Inserisci il codice della stanza</p>
+      <input type="text" id="inp-code" class="input code-input" placeholder="ABC123" maxlength="6"
+             oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      <div style="margin-top:20px;display:flex;justify-content:center">
+        <button class="btn-p" style="max-width:200px" onclick="doJoin()">Connettiti</button>
+      </div>
+    </div>
+    <div id="join-loading" class="hidden" style="text-align:center">
+      <div class="spinner"></div>
+      <p style="color:var(--dim);margin-top:20px;font-size:14px">Connessione...</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROOM ═══ -->
+<div id="s-room" class="screen">
+  <div class="glow" id="room-glow"></div>
+
+  <div class="hdr" style="justify-content:space-between;position:relative;z-index:2">
+    <button class="btn-back" onclick="doLeave()">←</button>
+    <div style="text-align:center">
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px" class="mono">STANZA</div>
+      <div id="room-code" style="font-size:14px;font-weight:700;color:var(--accent)" class="mono"></div>
+    </div>
+    <div id="room-count" style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2)">
+      <div class="dot dot-g"></div>
+      <span class="mono" style="font-size:11px;color:var(--green)">1</span>
+    </div>
+  </div>
+
+  <!-- Upload (host) -->
+  <div id="section-upload" style="padding:0 24px 16px" class="slide">
+    <div class="upload" id="upload-area" onclick="document.getElementById('file-audio').click()">
+      <input type="file" id="file-audio" accept="audio/*" onchange="doUpload(event)">
+      <div id="upload-label">
+        <div style="font-size:32px;margin-bottom:8px">🎵</div>
+        <div style="font-size:14px;font-weight:600">Carica un file audio</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">MP3, WAV, OGG, AAC</div>
+      </div>
+      <div id="upload-progress" class="hidden">
+        <div style="font-size:14px;font-weight:600">Caricamento...</div>
+        <div class="buffer-bar" style="margin-top:12px"><div id="upload-fill" class="buffer-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buffer (client) -->
+  <div id="section-buffer" class="hidden" style="padding:20px 24px;text-align:center">
+    <div class="spinner" style="width:36px;height:36px;margin-bottom:14px"></div>
+    <div style="font-size:14px;font-weight:600" id="buffer-label">Sincronizzazione...</div>
+    <div class="buffer-bar" style="max-width:260px;margin:12px auto 0"><div id="buffer-fill" class="buffer-fill" style="width:0%"></div></div>
+    <div id="buffer-detail" class="mono" style="font-size:10px;color:var(--muted);margin-top:6px"></div>
+  </div>
+
+  <!-- Player -->
+  <div id="section-player" class="hidden" style="padding:12px 24px 0;display:flex;flex-direction:column;align-items:center;position:relative;z-index:2">
+    <div style="width:150px;height:150px;border-radius:22px;background:linear-gradient(135deg,#1a1a1e,#2a2a30);border:1px solid var(--s2);display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 16px 48px rgba(0,0,0,.5)">
+      <div id="viz-main" class="viz off"></div>
+    </div>
+    <div id="track-name" style="font-size:17px;font-weight:700;text-align:center">—</div>
+    <div style="width:100%;max-width:300px;margin-top:18px">
+      <div class="prog-track" id="prog-track" onclick="doSeek(event)">
+        <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <span id="time-cur" class="mono" style="font-size:10px;color:var(--muted)">0:00</span>
+        <span id="time-dur" class="mono" style="font-size:10px;color:var(--muted)">0:00</span>
+      </div>
+    </div>
+    <div id="controls-host" style="display:flex;align-items:center;gap:32px;margin-top:14px">
+      <button class="btn-play" id="btn-toggle" onclick="doTogglePlay()">▶</button>
+    </div>
+    <!-- Volume locale -->
+    <div class="volume-row" style="width:100%;max-width:280px;margin-top:14px">
+      <span class="volume-label">🔈</span>
+      <input type="range" min="0" max="100" value="100" oninput="setVolume(this.value)">
+      <span class="volume-label">🔊</span>
+    </div>
+    <!-- Sync badge -->
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+      <div id="viz-sm1" class="viz sm off"></div>
+      <span id="sync-label" class="mono" style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">in attesa</span>
+      <div id="viz-sm2" class="viz sm off"></div>
+    </div>
+  </div>
+
+  <!-- Devices -->
+  <div style="flex:1;padding:14px 24px 24px;overflow-y:auto;position:relative;z-index:2">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px">Speaker connessi</span>
+    </div>
+    <div id="device-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="section-relay" class="hidden" style="margin-top:16px;text-align:center">
+      <button class="btn-sm" onclick="doBecomeRelay()" id="btn-relay">📡 Espandi rete (diventa ponte)</button>
+      <p style="font-size:10px;color:var(--muted);margin-top:6px;max-width:260px;margin-inline:auto">
+        Attiva l'hotspot del tuo telefono per permettere ad altri di collegarsi tramite te
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+// ════════ STATE ════════
+let ws=null;
+let S={peerId:null,roomCode:null,isHost:false,members:[],audioReady:false,bufferReady:false,clockOffset:0,clockSynced:false,playing:false,startedAt:null,pausedAt:0,trackDuration:0,trackName:""};
+let audioCtx=null,audioBuffer=null,sourceNode=null,gainNode=null,analyser=null;
+let vizInterval=null,posInterval=null;
+
+// ════════ SCREENS ════════
+function showScreen(n){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('s-'+n).classList.add('active')}
+function toast(m,t='ok'){const e=document.createElement('div');e.className='toast toast-'+t;e.textContent=m;document.getElementById('toast-wrap').appendChild(e);setTimeout(()=>e.remove(),3000)}
+function getName(){return document.getElementById('inp-name').value.trim()||'Speaker '+Math.floor(Math.random()*99)}
+
+// ════════ WEBSOCKET ════════
+function connectWs(then){
+  const p=location.protocol==='https:'?'wss':'ws';
+  ws=new WebSocket(p+'://'+location.host);
+  ws.onopen=()=>then();
+  ws.onclose=()=>{toast('Connessione persa','err');setTimeout(()=>showScreen('home'),2000)};
+  ws.onmessage=e=>handleMsg(JSON.parse(e.data));
+}
+function wsSend(m){if(ws?.readyState===1)ws.send(JSON.stringify(m))}
+
+// ════════ ACTIONS ════════
+function doCreate(){connectWs(()=>wsSend({type:'create_room',name:getName()}))}
+function doJoin(){
+  const code=document.getElementById('inp-code').value.trim();
+  if(code.length<4){toast('Codice troppo corto','err');return}
+  document.getElementById('join-form').classList.add('hidden');
+  document.getElementById('join-loading').classList.remove('hidden');
+  connectWs(()=>wsSend({type:'join_room',code,name:getName()}));
+}
+function doLeave(){
+  stopPlayback();if(ws)ws.close();
+  S={...S,roomCode:null,isHost:false,members:[],audioReady:false,bufferReady:false,playing:false};
+  audioBuffer=null;showScreen('home');
+}
+
+// ════════ HANDLER ════════
+function handleMsg(msg){
+  switch(msg.type){
+    case 'room_created':
+      S.peerId=msg.peerId;S.roomCode=msg.room.code;S.isHost=true;S.members=msg.room.members;
+      enterRoom();break;
+    case 'room_joined':
+      S.peerId=msg.peerId;S.roomCode=msg.room.code;S.isHost=false;S.members=msg.room.members;S.audioReady=msg.room.audioReady;
+      document.getElementById('join-form').classList.remove('hidden');
+      document.getElementById('join-loading').classList.add('hidden');
+      enterRoom();startClockSync();
+      if(msg.room.audioReady)downloadAudio();
+      break;
+    case 'error':
+      toast(msg.message,'err');
+      document.getElementById('join-form').classList.remove('hidden');
+      document.getElementById('join-loading').classList.add('hidden');break;
+    case 'peer_joined':case 'peer_left':case 'peer_updated':
+      S.members=msg.room.members;renderDevices();break;
+    case 'audio_ready':
+      S.audioReady=true;S.trackName=msg.filename;
+      if(!S.isHost)downloadAudio();break;
+    case 'room_closed':
+      toast(msg.reason||'Stanza chiusa','err');stopPlayback();
+      setTimeout(()=>showScreen('home'),1500);break;
+    case 'sync_pong':handleSyncPong(msg);break;
+    case 'playback_sync':handlePlaybackSync(msg);break;
+  }
+}
+
+// ════════ ENTER ROOM ════════
+function enterRoom(){
+  showScreen('room');
+  document.getElementById('room-code').textContent=S.roomCode;
+  document.getElementById('section-upload').classList.toggle('hidden',!S.isHost);
+  document.getElementById('section-buffer').classList.add('hidden');
+  document.getElementById('section-player').classList.add('hidden');
+  document.getElementById('section-relay').classList.toggle('hidden',S.isHost);
+  document.getElementById('controls-host').style.display=S.isHost?'flex':'none';
+  renderDevices();initAudioCtx();initViz();
+}
+
+// ════════ AUDIO CONTEXT ════════
+function initAudioCtx(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  gainNode=audioCtx.createGain();
+  analyser=audioCtx.createAnalyser();analyser.fftSize=64;
+  gainNode.connect(analyser);analyser.connect(audioCtx.destination);
+}
+
+// ════════ UPLOAD (Host) ════════
+async function doUpload(e){
+  const file=e.target.files[0];if(!file)return;
+  initAudioCtx();
+  if(audioCtx.state==='suspended')await audioCtx.resume();
+  document.getElementById('upload-label').classList.add('hidden');
+  document.getElementById('upload-progress').classList.remove('hidden');
+
+  const xhr=new XMLHttpRequest();
+  xhr.open('POST','/upload/'+S.roomCode);
+  xhr.setRequestHeader('X-Filename',file.name);
+  xhr.upload.onprogress=ev=>{if(ev.lengthComputable)document.getElementById('upload-fill').style.width=(ev.loaded/ev.total*100)+'%'};
+  xhr.onload=async()=>{
+    toast('Audio caricato!');S.trackName=file.name;
+    const buf=await file.arrayBuffer();
+    audioBuffer=await audioCtx.decodeAudioData(buf);
+    S.trackDuration=audioBuffer.duration;S.bufferReady=true;
+    wsSend({type:'buffer_ready',duration:audioBuffer.duration});
+    showPlayer();
+  };
+  xhr.onerror=()=>toast('Errore upload','err');
+  xhr.send(file);
+}
+
+// ════════ DOWNLOAD (Client) ════════
+async function downloadAudio(){
+  document.getElementById('section-buffer').classList.remove('hidden');
+  const label=document.getElementById('buffer-label'),fill=document.getElementById('buffer-fill'),detail=document.getElementById('buffer-detail');
+  label.textContent='Download audio...';
+  try{
+    const resp=await fetch('/audio/'+S.roomCode);
+    if(!resp.ok)throw new Error('File non disponibile');
+    const reader=resp.body.getReader();const total=+(resp.headers.get('Content-Length')||0);
+    let received=0;const chunks=[];
+    while(true){
+      const{done,value}=await reader.read();if(done)break;
+      chunks.push(value);received+=value.length;
+      if(total){fill.style.width=(received/total*100)+'%';detail.textContent=(received/1048576).toFixed(1)+' / '+(total/1048576).toFixed(1)+' MB'}
+    }
+    label.textContent='Decodifica audio...';
+    const blob=new Blob(chunks);const arrayBuf=await blob.arrayBuffer();
+    initAudioCtx();
+    if(audioCtx.state==='suspended')await audioCtx.resume();
+    audioBuffer=await audioCtx.decodeAudioData(arrayBuf);
+    S.trackDuration=audioBuffer.duration;
+    label.textContent='Sincronizzazione clock...';
+    if(!S.clockSynced)await new Promise(r=>{const c=setInterval(()=>{if(S.clockSynced){clearInterval(c);r()}},100)});
+    label.textContent='Pronto!';fill.style.width='100%';
+    S.bufferReady=true;
+    wsSend({type:'buffer_ready',duration:audioBuffer.duration});
+    toast('Audio pronto — sincronizzato!');
+    setTimeout(()=>{document.getElementById('section-buffer').classList.add('hidden');showPlayer()},400);
+  }catch(err){label.textContent='Errore';toast(err.message,'err')}
+}
+
+// ════════ CLOCK SYNC ════════
+const SYNC_ROUNDS=7;let syncResults=[],syncRound=0;
+function startClockSync(){syncResults=[];syncRound=0;sendSyncPing()}
+function sendSyncPing(){wsSend({type:'sync_ping',t1:Date.now(),round:syncRound})}
+function handleSyncPong(msg){
+  const t4=Date.now(),rtt=(t4-msg.t1)-(msg.t3-msg.t2),offset=((msg.t2-msg.t1)+(msg.t3-t4))/2;
+  syncResults.push({rtt,offset});syncRound++;
+  if(syncRound<SYNC_ROUNDS){setTimeout(sendSyncPing,50)}
+  else{
+    syncResults.sort((a,b)=>a.rtt-b.rtt);
+    const good=syncResults.slice(0,SYNC_ROUNDS-2),mid=Math.floor(good.length/2);
+    S.clockOffset=good[mid].offset;S.clockSynced=true;
+    const avg=good.reduce((s,r)=>s+r.rtt,0)/good.length;
+    wsSend({type:'sync_complete',offset:S.clockOffset,avgRtt:avg});
+    console.log('Clock synced:',S.clockOffset.toFixed(1)+'ms offset,',avg.toFixed(1)+'ms RTT');
+  }
+}
+function serverNow(){return Date.now()+S.clockOffset}
+
+// ════════ PLAYBACK ════════
+function showPlayer(){
+  document.getElementById('section-player').classList.remove('hidden');
+  document.getElementById('section-upload').classList.add('hidden');
+  document.getElementById('track-name').textContent=S.trackName.replace(/\.[^.]+$/,'');
+  document.getElementById('time-dur').textContent=fmtTime(S.trackDuration);
+  startPosUpdater();
+}
+function doTogglePlay(){
+  if(!S.isHost||!audioBuffer)return;
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  wsSend({type:'playback_control',action:S.playing?'pause':'play',position:S.pausedAt});
+}
+function doSeek(e){
+  if(!S.isHost||!audioBuffer)return;
+  const r=e.currentTarget.getBoundingClientRect();
+  wsSend({type:'playback_control',action:'seek',position:(e.clientX-r.left)/r.width*S.trackDuration});
+}
+function handlePlaybackSync(msg){
+  if(!audioBuffer||!S.bufferReady)return;
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  if(msg.action==='play'||msg.action==='seek'){
+    const pausedAt=msg.pausedAt??msg.position??0;
+    const localStarted=(msg.startedAt||Date.now())-S.clockOffset;
+    const elapsed=(Date.now()-localStarted)/1000;
+    const pos=pausedAt+elapsed;
+    S.playing=msg.action==='play'||(msg.playing===true);
+    S.startedAt=msg.startedAt;S.pausedAt=pausedAt;
+    if(S.playing)startAt(pos);
+  }else if(msg.action==='pause'){
+    S.playing=false;S.pausedAt=msg.position;S.startedAt=null;stopPlayback();
+  }
+  updateUI();
+}
+function startAt(pos){
+  if(sourceNode)try{sourceNode.stop()}catch{}
+  if(pos>=S.trackDuration||pos<0)pos=0;
+  sourceNode=audioCtx.createBufferSource();
+  sourceNode.buffer=audioBuffer;sourceNode.connect(gainNode);
+  sourceNode.start(0,pos);
+  sourceNode.onended=()=>{if(S.playing){S.playing=false;S.pausedAt=0;updateUI()}};
+  S.playing=true;updateUI();
+}
+function stopPlayback(){if(sourceNode)try{sourceNode.stop()}catch{};sourceNode=null;updateUI()}
+function curPos(){
+  if(!S.playing||!S.startedAt)return S.pausedAt||0;
+  return S.pausedAt+(serverNow()-S.startedAt)/1000;
+}
+
+// ════════ UI ════════
+function updateUI(){
+  const btn=document.getElementById('btn-toggle');if(btn)btn.textContent=S.playing?'⏸':'▶';
+  ['viz-main','viz-sm1','viz-sm2'].forEach(id=>{document.getElementById(id).classList.toggle('off',!S.playing)});
+  const sl=document.getElementById('sync-label');
+  sl.textContent=S.playing?'sincronizzato':S.bufferReady?'in pausa':'in attesa';
+  sl.style.color=S.playing?'var(--green)':'var(--muted)';
+}
+function startPosUpdater(){
+  if(posInterval)clearInterval(posInterval);
+  posInterval=setInterval(()=>{
+    const p=curPos(),d=S.trackDuration||1;
+    document.getElementById('prog-fill').style.width=(p/d*100)+'%';
+    document.getElementById('time-cur').textContent=fmtTime(p);
+  },250);
+}
+function fmtTime(s){if(!s||isNaN(s))return'0:00';return Math.floor(s/60)+':'+Math.floor(s%60).toString().padStart(2,'0')}
+function setVolume(v){if(gainNode)gainNode.gain.value=v/100}
+
+// ════════ VISUALIZER ════════
+function initViz(){
+  ['viz-main','viz-sm1','viz-sm2'].forEach(id=>{
+    const el=document.getElementById(id);el.innerHTML='';
+    const n=id==='viz-main'?24:12;
+    for(let i=0;i<n;i++){const b=document.createElement('div');b.className='viz-bar';b.style.height='4px';el.appendChild(b)}
+  });
+  if(vizInterval)clearInterval(vizInterval);
+  vizInterval=setInterval(()=>{
+    if(!analyser||!S.playing)return;
+    const d=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(d);
+    ['viz-main','viz-sm1','viz-sm2'].forEach(id=>{
+      const el=document.getElementById(id);if(el.classList.contains('off'))return;
+      const bars=el.querySelectorAll('.viz-bar');
+      bars.forEach((b,i)=>{const idx=Math.floor(i/bars.length*d.length);const v=d[idx]/255;b.style.height=(id==='viz-main'?v*44+4:v*14+4)+'px'});
+    });
+  },80);
+}
+
+// ════════ DEVICES ════════
+function renderDevices(){
+  const c=document.getElementById('device-list');
+  document.getElementById('room-count').querySelector('span').textContent=S.members.length;
+  c.innerHTML='';
+  S.members.forEach((m,i)=>{
+    const self=m.id===S.peerId;
+    const lc=!m.latency?'dot-g':m.latency<20?'dot-g':m.latency<50?'dot-y':'dot-r';
+    const lt=m.isHost?'host':m.latency!=null?m.latency.toFixed(0)+'ms':'...';
+    const role=m.isHost?' <span style="color:var(--accent);font-size:10px">HOST</span>':m.isRelay?' <span style="color:var(--green);font-size:10px">RELAY</span>':'';
+    const buf=m.bufferReady?'<span style="color:var(--green);font-size:9px">✓</span>':'<span style="color:var(--muted);font-size:9px">◌</span>';
+    const d=document.createElement('div');
+    d.className='card'+(self?' self':'');d.style.animationDelay=(i*.08)+'s';
+    d.innerHTML=`<div class="card-icon">${m.isRelay?'📡':'📱'}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}${self?' <span style="color:var(--accent);font-size:10px">(Tu)</span>':''}${role}</div>
+      <div class="mono" style="font-size:10px;color:var(--muted)">${lt}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><div class="dot ${lc}"></div>${buf}</div>`;
+    c.appendChild(d);
+  });
+}
+function doBecomeRelay(){
+  wsSend({type:'become_relay'});
+  document.getElementById('btn-relay').textContent='📡 Sei un ponte attivo';
+  document.getElementById('btn-relay').disabled=true;
+  toast('Attiva hotspot e condividi il link!');
+}
+
+// ════════ INIT ════════
+document.addEventListener('click',()=>{if(audioCtx?.state==='suspended')audioCtx.resume()},{once:true});
+// Auto-fill name on mobile
+if(/iPhone|iPad|Android/i.test(navigator.userAgent)){document.getElementById('inp-name').placeholder='Il tuo nome'}
+</script>
+</body>
+</html>
